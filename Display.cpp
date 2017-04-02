@@ -33,16 +33,20 @@ const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 720;
 
 const int POSE_FIST = 0;
-const int POSE_FINGERS = 1;
-const int POSE_OTHER = 2;
+const int POSE_TAP = 1;
+const int POSE_SPREAD = 2;
+const int POSE_OTHER = 3;
 
 const int X_SENS = 3;
 const int Y_SENS = 2;
 
 SDL_Window * window = NULL; //window to render to
 SDL_Surface * screenSurface = NULL; //surface contained by window
+SDL_Surface * drawSurface = NULL;
+
 SDL_Renderer * renderer = NULL;
 SDL_Texture * mouseTexture;
+SDL_Texture * drawTexture;
 SDL_Event event;
 SDL_Rect mouseRect;
 SDL_Rect tile;
@@ -50,6 +54,7 @@ SDL_Rect downRect;
 SDL_Rect upRect;
 SDL_Rect pointerRect;
 bool mouseDown = false;
+bool calibrate = false;
 
 // Classes that inherit from myo::DeviceListener can be used to receive events from Myo devices. DeviceListener
 // provides several virtual functions for handling different kinds of events. If you do not override an event, the
@@ -97,26 +102,27 @@ class DataCollector : public myo::DeviceListener {
     void onPose(myo::Myo* myo, uint64_t timestamp, myo::Pose pose) {
 
       if(pose == myo::Pose::fist) {
-        printf("\nFist pose\n");
+        printf("\nTap pose\n");
+
         myo->unlock(myo::Myo::unlockHold);
         myo->notifyUserAction();
       } else if(currentPose == myo::Pose::fist) {
-        printf("\nFist stop\n");
+        printf("\nTap stop\n");
 
-        // Tell the Myo to stay unlocked only for a short period. This allows the Myo to stay unlocked while poses
-        // are being performed, but lock after inactivity.
-        //myo->unlock(myo::Myo::unlockTimed);
         myo->unlock(myo::Myo::unlockHold);
         myo->notifyUserAction();
       }
-
-      if(pose == myo::Pose::fingersSpread) {
+      else if(pose == myo::Pose::doubleTap) {
         zPitch = pitch_w - 900;
         zYaw = yaw_w - 900;
+
         myo->unlock(myo::Myo::unlockHold);
         myo->notifyUserAction();
       }
-      
+      else {
+        myo->unlock(myo::Myo::unlockHold);
+        myo->notifyUserAction();
+      }
       currentPose = pose;
 
     }
@@ -182,8 +188,10 @@ class DataCollector : public myo::DeviceListener {
     int getPose() {
       if(currentPose == myo::Pose::fist)
         return POSE_FIST;
+      else if(currentPose == myo::Pose::doubleTap)
+        return POSE_TAP;
       else if(currentPose == myo::Pose::fingersSpread)
-        return POSE_FINGERS;
+        return POSE_SPREAD;
       else
         return POSE_OTHER;
     }
@@ -250,9 +258,15 @@ int Display::init() {
 
   screenSurface = SDL_GetWindowSurface(window);
 
+  //drawSurface = SDL_GetWindowSurface(window);
+  drawSurface = SDL_CreateRGBSurface(0, SCREEN_WIDTH, SCREEN_HEIGHT, 32, 0, 0, 0, 0);
+
   SDL_FillRect(screenSurface, NULL, 
       SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00));
-
+  
+  SDL_FillRect(drawSurface, NULL, 
+      SDL_MapRGB(drawSurface->format, 0x00, 0x00, 0x00));
+  
   SDL_UpdateWindowSurface(window);
 
   SDL_ShowCursor(SDL_DISABLE);
@@ -300,16 +314,21 @@ int Display::handleEvents() {
             return -1;
         }
         break;
+      /*
       case SDL_MOUSEBUTTONDOWN:
         mouseDown = true;
         SDL_GetMouseState(&x, &y);
         downRect = {x - (x % 50), y - (y % 50), 50, 50};
+        if(x / 50 == 0 && y / 50 == 0) {
+          calibrate = true;
+        }
         break;
       case SDL_MOUSEBUTTONUP:
         mouseDown = false;
         SDL_GetMouseState(&x, &y);
         upRect = {x - (x % 50), y - (y % 50), 50, 50};
         break;
+      */
       case SDL_MOUSEMOTION:
 
         //get mouse position, draw rect
@@ -326,9 +345,15 @@ int Display::handleEvents() {
 void Display::render() {
   //hub->run(1000);
 
+  //SDL_FillRect(drawSurface, NULL, SDL_MapRGB(drawSurface->format, 255, 255, 180));
+
   //clear screen
   SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
   SDL_RenderClear(renderer);
+  //SDL_BlitSurface(drawSurface, NULL, screenSurface, NULL);
+  drawTexture = SDL_CreateTextureFromSurface(renderer, drawSurface);
+  SDL_RenderCopy(renderer, drawTexture, NULL, NULL);
+  SDL_DestroyTexture(drawTexture);
 
   //draw rect
   /*
@@ -337,8 +362,9 @@ void Display::render() {
   SDL_RenderFillRect(renderer, &rect);
   */
 
-  SDL_SetRenderDrawColor(renderer, 0x00, 0x88, 0x00, 0xFF);
+  //SDL_SetRenderDrawColor(renderer, 0x00, 0x88, 0x00, 0xFF);
 
+  /*
   //render tiles
   for(int i = 0; i < 8; i++)
     for(int j = 0; j < 8; j++) {
@@ -350,9 +376,32 @@ void Display::render() {
       if((i + j) % 2 == 0)
         SDL_RenderFillRect(renderer, &tile);
     }
+  */
 
-  SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
-  SDL_RenderFillRect(renderer, &downRect);
+  /*
+  tile = {0, 0, 50, 50};
+  SDL_RenderFillRect(renderer, &tile);
+
+  if(calibrate) {
+    tile.x = SCREEN_WIDTH - 50;
+    tile.y = 0;
+
+    SDL_RenderFillRect(renderer, &tile);
+
+    tile.x = SCREEN_WIDTH - 50;
+    tile.y = SCREEN_HEIGHT - 50;
+
+    SDL_RenderFillRect(renderer, &tile);
+
+    tile.x = 0;
+    tile.y = SCREEN_HEIGHT - 50;
+
+    SDL_RenderFillRect(renderer, &tile);
+  }
+  */
+
+  //SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
+  //SDL_RenderFillRect(renderer, &downRect);
 
   //render crosshair
   SDL_RenderCopy(renderer, mouseTexture, NULL, &mouseRect);
@@ -362,6 +411,7 @@ void Display::render() {
 
   //show frame
   SDL_RenderPresent(renderer);
+  //SDL_UpdateWindowSurface(window);
 
   //cout << x << " " << y << endl;
 }
@@ -374,12 +424,14 @@ void Display::stop() {
 
 int main(int argc, char * argv[]) {
 
-    //init Myo
+  //init Myo
   // We catch any exceptions that might occur below -- see the catch statement for more details.
   try {
     // First, we create a Hub with our application identifier. Be sure not to use the com.example namespace when
     // publishing your application. The Hub provides access to one or more Myos.
     myo::Hub hub("com.example.myoSign");
+    //hub.setLockingPolicy(libmyo_locking_policy_none);
+    hub.setLockingPolicy(myo::Hub::lockingPolicyNone);
 
     std::cout << "Attempting to find a Myo..." << std::endl;
     // Next, we attempt to find a Myo to use. If a Myo is already paired in Myo Connect, this will return that Myo
@@ -438,9 +490,28 @@ int main(int argc, char * argv[]) {
 
     //TODO clear change
     hub.run(1);
+
     //collector.print();
-    pointerRect = {(int) (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0, (int) (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0, 16, 16};
-    cout << (int) (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0 << " " << (int) (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0 << "\n";
+    int x = (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0;
+    int y = (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
+    
+    int pose = collector.getPose();
+
+    SDL_Rect rect2 = {x, y, 3, 3};
+    SDL_Rect rect3 = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+
+    switch(pose) {
+      case POSE_FIST:
+        cout << "pose fist detected" << endl;
+        SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, 255, 255, 0));
+        break;
+      case POSE_SPREAD:
+        //SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
+        SDL_FillRect(drawSurface, &rect3, SDL_MapRGB(drawSurface->format, 0, 0, 0));
+        break;
+    }
+
+    pointerRect = {x - 8, y - 8, 16, 16};
     disp.render();
     frames++;
   }
