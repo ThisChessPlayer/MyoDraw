@@ -32,6 +32,13 @@ using std::endl;
 const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 720;
 
+const int POSE_FIST = 0;
+const int POSE_FINGERS = 1;
+const int POSE_OTHER = 2;
+
+const int X_SENS = 3;
+const int Y_SENS = 2;
+
 SDL_Window * window = NULL; //window to render to
 SDL_Surface * screenSurface = NULL; //surface contained by window
 SDL_Renderer * renderer = NULL;
@@ -41,6 +48,7 @@ SDL_Rect mouseRect;
 SDL_Rect tile;
 SDL_Rect downRect;
 SDL_Rect upRect;
+SDL_Rect pointerRect;
 bool mouseDown = false;
 
 // Classes that inherit from myo::DeviceListener can be used to receive events from Myo devices. DeviceListener
@@ -79,35 +87,37 @@ class DataCollector : public myo::DeviceListener {
       float pitch = asin(max(-1.0f, min(1.0f, 2.0f * (quat.w() * quat.y() - quat.z() * quat.x()))));
       float yaw = atan2(2.0f * (quat.w() * quat.z() + quat.x() * quat.y()),
                       1.0f - 2.0f * (quat.y() * quat.y() + quat.z() * quat.z()));
-      // Convert the floating point angles in radians to a scale from 0 to 18.
-      roll_w = static_cast<int>((roll + (float)M_PI)/(M_PI * 2.0f) * 18);
-      pitch_w = static_cast<int>((pitch + (float)M_PI/2.0f)/M_PI * 18);
-      yaw_w = static_cast<int>((yaw + (float)M_PI)/(M_PI * 2.0f) * 18);
+      // Convert the floating point angles in radians to a scale from 0 to 1800.
+      roll_w = static_cast<int>((roll + (float)M_PI)/(M_PI * 2.0f) * 1800);
+      pitch_w = static_cast<int>((pitch + (float)M_PI/2.0f)/M_PI * 1800);
+      yaw_w = static_cast<int>((yaw + (float)M_PI)/(M_PI * 2.0f) * 1800);
     }
     // onPose() is called whenever the Myo detects that the person wearing it has changed their pose, for example,
     // making a fist, or not making a fist anymore.
     void onPose(myo::Myo* myo, uint64_t timestamp, myo::Pose pose) {
-      currentPose = pose;
 
       if(pose == myo::Pose::fist) {
         printf("\nFist pose\n");
-      }
-      if (pose != myo::Pose::unknown && pose != myo::Pose::rest) {
-        // Tell the Myo to stay unlocked until told otherwise. We do that here so you can hold the poses without the
-        // Myo becoming locked.
-        //myo->unlock(myo::Myo::unlockHold);
-        // Notify the Myo that the pose has resulted in an action, in this case changing
-        // the text on the screen. The Myo will vibrate.
-        //myo->notifyUserAction();
-      } else {
+        myo->unlock(myo::Myo::unlockHold);
+        myo->notifyUserAction();
+      } else if(currentPose == myo::Pose::fist) {
         printf("\nFist stop\n");
 
         // Tell the Myo to stay unlocked only for a short period. This allows the Myo to stay unlocked while poses
         // are being performed, but lock after inactivity.
         //myo->unlock(myo::Myo::unlockTimed);
-      }
-      myo->unlock(myo::Myo::unlockHold);
+        myo->unlock(myo::Myo::unlockHold);
         myo->notifyUserAction();
+      }
+
+      if(pose == myo::Pose::fingersSpread) {
+        zPitch = pitch_w - 900;
+        zYaw = yaw_w - 900;
+        myo->unlock(myo::Myo::unlockHold);
+        myo->notifyUserAction();
+      }
+      
+      currentPose = pose;
 
     }
     // onArmSync() is called whenever Myo has recognized a Sync Gesture after someone has put it on their
@@ -143,6 +153,7 @@ class DataCollector : public myo::DeviceListener {
     // We define this function to print the current values that were updated by the on...() functions above.
     void print()
     {
+      /*
       // Clear the current line
       std::cout << '\r';
       // Print out the orientation. Orientation data is always available, even if no arm is currently recognized.
@@ -163,14 +174,30 @@ class DataCollector : public myo::DeviceListener {
         std::cout << '[' << std::string(8, ' ') << ']' << "[?]" << '[' << std::string(14, ' ') << ']';
       }
       std::cout << std::flush;
+      */
+
+      cout << roll_w - zRoll << " " << pitch_w - zPitch << " " << yaw_w - zYaw << endl;
     }
 
-    bool getfist() {
-      if(currentPose == myo::Pose::fist) {
-        return true;
-      }
+    int getPose() {
+      if(currentPose == myo::Pose::fist)
+        return POSE_FIST;
+      else if(currentPose == myo::Pose::fingersSpread)
+        return POSE_FINGERS;
       else
-        return false;
+        return POSE_OTHER;
+    }
+
+    int getRoll() {
+      return roll_w - zRoll;
+    }
+
+    int getPitch() {
+      return pitch_w - zPitch;
+    }
+
+    int getYaw() {
+      return yaw_w - zYaw;
     }
 
     // These values are set by onArmSync() and onArmUnsync() above.
@@ -180,6 +207,10 @@ class DataCollector : public myo::DeviceListener {
     bool isUnlocked;
     // These values are set by onOrientationData() and onPose() above.
     int roll_w, pitch_w, yaw_w;
+
+    int zRoll = 0;
+    int zPitch = pitch_w - 900;
+    int zYaw = yaw_w - 900;
     myo::Pose currentPose;
 };
 
@@ -279,7 +310,6 @@ int Display::handleEvents() {
         SDL_GetMouseState(&x, &y);
         upRect = {x - (x % 50), y - (y % 50), 50, 50};
         break;
-        break;
       case SDL_MOUSEMOTION:
 
         //get mouse position, draw rect
@@ -287,6 +317,7 @@ int Display::handleEvents() {
         mouseRect = {x - 8, y - 8, 16, 16};
 
         //cout << x << " " << y << endl;
+        break;
     }
   }
   return 0;
@@ -325,6 +356,9 @@ void Display::render() {
 
   //render crosshair
   SDL_RenderCopy(renderer, mouseTexture, NULL, &mouseRect);
+
+  //render another crosshair
+  SDL_RenderCopy(renderer, mouseTexture, NULL, &pointerRect);
 
   //show frame
   SDL_RenderPresent(renderer);
@@ -404,7 +438,9 @@ int main(int argc, char * argv[]) {
 
     //TODO clear change
     hub.run(1);
-
+    //collector.print();
+    pointerRect = {(int) (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0, (int) (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0, 16, 16};
+    cout << (int) (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0 << " " << (int) (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0 << "\n";
     disp.render();
     frames++;
   }
