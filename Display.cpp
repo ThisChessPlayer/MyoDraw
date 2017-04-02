@@ -91,11 +91,12 @@ class DataCollector : public myo::DeviceListener {
                          1.0f - 2.0f * (quat.x() * quat.x() + quat.y() * quat.y()));
       float pitch = asin(max(-1.0f, min(1.0f, 2.0f * (quat.w() * quat.y() - quat.z() * quat.x()))));
       float yaw = atan2(2.0f * (quat.w() * quat.z() + quat.x() * quat.y()),
-                      1.0f - 2.0f * (quat.y() * quat.y() + quat.z() * quat.z()));
+                        1.0f - 2.0f * (quat.y() * quat.y() + quat.z() * quat.z()));
       // Convert the floating point angles in radians to a scale from 0 to 1800.
       roll_w = static_cast<int>((roll + (float)M_PI)/(M_PI * 2.0f) * 1800);
       pitch_w = static_cast<int>((pitch + (float)M_PI/2.0f)/M_PI * 1800);
       yaw_w = static_cast<int>((yaw + (float)M_PI)/(M_PI * 2.0f) * 1800);
+      //if(yaw_w < 0) yaw_w += 1800;
     }
     // onPose() is called whenever the Myo detects that the person wearing it has changed their pose, for example,
     // making a fist, or not making a fist anymore.
@@ -159,29 +160,6 @@ class DataCollector : public myo::DeviceListener {
     // We define this function to print the current values that were updated by the on...() functions above.
     void print()
     {
-      /*
-      // Clear the current line
-      std::cout << '\r';
-      // Print out the orientation. Orientation data is always available, even if no arm is currently recognized.
-      std::cout << '[' << std::string(roll_w, '*') << std::string(18 - roll_w, ' ') << ']'
-                << '[' << std::string(pitch_w, '*') << std::string(18 - pitch_w, ' ') << ']'
-                << '[' << std::string(yaw_w, '*') << std::string(18 - yaw_w, ' ') << ']';
-      if (onArm) {
-        // Print out the lock state, the currently recognized pose, and which arm Myo is being worn on.
-        // Pose::toString() provides the human-readable name of a pose. We can also output a Pose directly to an
-        // output stream (e.g. std::cout << currentPose;). In this case we want to get the pose name's length so
-        // that we can fill the rest of the field with spaces below, so we obtain it as a string using toString().
-        std::string poseString = currentPose.toString();
-        std::cout << '[' << (isUnlocked ? "unlocked" : "locked  ") << ']'
-                  << '[' << (whichArm == myo::armLeft ? "L" : "R") << ']'
-                  << '[' << poseString << std::string(14 - poseString.size(), ' ') << ']';
-      } else {
-        // Print out a placeholder for the arm and pose when Myo doesn't currently know which arm it's on.
-        std::cout << '[' << std::string(8, ' ') << ']' << "[?]" << '[' << std::string(14, ' ') << ']';
-      }
-      std::cout << std::flush;
-      */
-
       cout << roll_w - zRoll << " " << pitch_w - zPitch << " " << yaw_w - zYaw << endl;
     }
 
@@ -343,65 +321,15 @@ int Display::handleEvents() {
 }
 
 void Display::render() {
-  //hub->run(1000);
-
-  //SDL_FillRect(drawSurface, NULL, SDL_MapRGB(drawSurface->format, 255, 255, 180));
 
   //clear screen
   SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
   SDL_RenderClear(renderer);
-  //SDL_BlitSurface(drawSurface, NULL, screenSurface, NULL);
+
+  //copy the drawing to the screen
   drawTexture = SDL_CreateTextureFromSurface(renderer, drawSurface);
   SDL_RenderCopy(renderer, drawTexture, NULL, NULL);
   SDL_DestroyTexture(drawTexture);
-
-  //draw rect
-  /*
-  SDL_Rect rect = {400, 400, 400, 400};
-  SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-  SDL_RenderFillRect(renderer, &rect);
-  */
-
-  //SDL_SetRenderDrawColor(renderer, 0x00, 0x88, 0x00, 0xFF);
-
-  /*
-  //render tiles
-  for(int i = 0; i < 8; i++)
-    for(int j = 0; j < 8; j++) {
-      tile.x = i * 50;
-      tile.y = j * 50;
-      tile.w = 50;
-      tile.h = 50;
-
-      if((i + j) % 2 == 0)
-        SDL_RenderFillRect(renderer, &tile);
-    }
-  */
-
-  /*
-  tile = {0, 0, 50, 50};
-  SDL_RenderFillRect(renderer, &tile);
-
-  if(calibrate) {
-    tile.x = SCREEN_WIDTH - 50;
-    tile.y = 0;
-
-    SDL_RenderFillRect(renderer, &tile);
-
-    tile.x = SCREEN_WIDTH - 50;
-    tile.y = SCREEN_HEIGHT - 50;
-
-    SDL_RenderFillRect(renderer, &tile);
-
-    tile.x = 0;
-    tile.y = SCREEN_HEIGHT - 50;
-
-    SDL_RenderFillRect(renderer, &tile);
-  }
-  */
-
-  //SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
-  //SDL_RenderFillRect(renderer, &downRect);
 
   //render crosshair
   SDL_RenderCopy(renderer, mouseTexture, NULL, &mouseRect);
@@ -412,8 +340,6 @@ void Display::render() {
   //show frame
   SDL_RenderPresent(renderer);
   //SDL_UpdateWindowSurface(window);
-
-  //cout << x << " " << y << endl;
 }
 
 void Display::stop() {
@@ -450,19 +376,6 @@ int main(int argc, char * argv[]) {
     // Hub::addListener() takes the address of any object whose class inherits from DeviceListener, and will cause
     // Hub::run() to send events to all registered device listeners.
     hub.addListener(&collector);
-    // Finally we enter our main loop.
-    /*
-    while (1) {
-        // In each iteration of our main loop, we run the Myo event loop for a set number of milliseconds.
-        // In this case, we wish to update our display 20 times a second, so we run for 1000/20 milliseconds.
-        hub.run(1000/20);
-        // After processing events, we call the print() member function we defined above to print out the values we've
-        // obtained from any events that have occurred.
-        collector.print();
-    }
-    */
-    // If a standard exception occurred, we print out its message and exit.
-
 
   Display disp;
   if(disp.init()) {
@@ -477,24 +390,37 @@ int main(int argc, char * argv[]) {
 
   int quit = 0;
   int frames = 0;
+
+  int i = 255;
+  int j = 0;
+  int k = 255;
   mouseRect = {0, 0, 10, 10};
   unsigned int begin = SDL_GetTicks();
+
+  //main loop
   while(!quit) {
+    //fps counter
     if(SDL_GetTicks() - begin > 1000) {
       begin = SDL_GetTicks();
       cout << "FPS: " << frames << endl;
       frames = 0;
     }
+
+    //check for end loop
     if(disp.handleEvents() == -1)
       break;
 
-    //TODO clear change
+    //handle myo events
     hub.run(1);
 
-    //collector.print();
+    //calculate myo position
     int x = (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0;
     int y = (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
     
+    //cout << x << " " << y << endl;
+    collector.print();
+
+    //get myo pose
     int pose = collector.getPose();
 
     SDL_Rect rect2 = {x, y, 3, 3};
@@ -502,11 +428,21 @@ int main(int argc, char * argv[]) {
 
     switch(pose) {
       case POSE_FIST:
-        cout << "pose fist detected" << endl;
-        SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, 255, 255, 0));
+        //draw to screen
+        SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, i, j, k));
+        i--;
+        j++;
+        k--;
+
+        if(i < 0)
+          i = 255;
+        if(j > 255)
+          j = 0;
+        if(k < 0)
+          k = 255;
         break;
       case POSE_SPREAD:
-        //SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF);
+        //clear drawings
         SDL_FillRect(drawSurface, &rect3, SDL_MapRGB(drawSurface->format, 0, 0, 0));
         break;
     }
