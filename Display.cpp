@@ -391,9 +391,9 @@ int main(int argc, char * argv[]) {
   int quit = 0;
   int frames = 0;
 
-  int i = 127;
+  int i = 255;
   int j = 0;
-  int k = 255;
+  int k = 0;
   mouseRect = {0, 0, 10, 10};
   unsigned int begin = SDL_GetTicks();
 
@@ -424,12 +424,32 @@ int main(int argc, char * argv[]) {
     int pose = collector.getPose();
 
     SDL_Rect rect2 = {x, y, 3, 3};
-    SDL_Rect rect3 = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+    //SDL_Rect rect3 = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 
     switch(pose) {
       case POSE_FIST:
         //draw to screen
         SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, i, j, k));
+
+        if(i == 255 && j < 255 && k == 0) {
+          j++;
+        }
+        else if(i > 0 && j == 255) {
+          i--;
+        }
+        else if(j == 255 && k < 255) {
+          k++;
+        }
+        else if(j > 0 && k == 255) {
+          j--;
+        }
+        else if(k == 255 && i < 255) {
+          i++;
+        }
+        else {
+          k--;
+        }
+        /*
         i += 1;
         j += 2;
         k += 3;
@@ -440,10 +460,11 @@ int main(int argc, char * argv[]) {
           j = 0;
         if(k > 255)
           k = 0;
+          */
         break;
       case POSE_SPREAD:
         //clear drawings
-        SDL_FillRect(drawSurface, &rect3, SDL_MapRGB(drawSurface->format, 0, 0, 0));
+        SDL_FillRect(drawSurface, NULL, SDL_MapRGB(drawSurface->format, 0, 0, 0));
         break;
     }
 

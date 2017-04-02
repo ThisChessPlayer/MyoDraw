@@ -1,7 +1,7 @@
  /*****************************************************************************
 
                                                          Author: Jason Ma
-                                                         Date:   Feb 07 2017
+                                                         Date:   Apr 01 2017
                                       SDLGame
 
  File Name:     Display.h
