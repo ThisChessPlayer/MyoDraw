@@ -18,7 +18,7 @@ endif
 
 OBJS = Display.cpp
 
-OBJ_NAME = myoSign
+OBJ_NAME = myoDraw
 
 all : $(OBJS)
 	g++ $(OBJS) $(COMPILER_FLAGS) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(LINKER_FLAGS) -o $(OBJ_NAME)

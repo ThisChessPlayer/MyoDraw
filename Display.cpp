@@ -23,7 +23,6 @@
 #include <stdexcept>
 #include <string>
 #include <algorithm>
-// The only file that needs to be included to use the Myo C++ SDK is myo.hpp.
 #include <myo/myo.hpp>
 
 using std::cout;
@@ -37,8 +36,8 @@ const int POSE_TAP = 1;
 const int POSE_SPREAD = 2;
 const int POSE_OTHER = 3;
 
-const int X_SENS = 3;
-const int Y_SENS = 2;
+const int X_SENS = 5;
+const int Y_SENS = 3;
 
 SDL_Window * window = NULL; //window to render to
 SDL_Surface * screenSurface = NULL; //surface contained by window
@@ -55,6 +54,9 @@ SDL_Rect upRect;
 SDL_Rect pointerRect;
 bool mouseDown = false;
 bool calibrate = false;
+
+bool xInvert = false;
+bool yInvert = false;
 
 // Classes that inherit from myo::DeviceListener can be used to receive events from Myo devices. DeviceListener
 // provides several virtual functions for handling different kinds of events. If you do not override an event, the
@@ -103,12 +105,12 @@ class DataCollector : public myo::DeviceListener {
     void onPose(myo::Myo* myo, uint64_t timestamp, myo::Pose pose) {
 
       if(pose == myo::Pose::fist) {
-        printf("\nTap pose\n");
+        printf("\nFist pose\n");
 
         myo->unlock(myo::Myo::unlockHold);
         myo->notifyUserAction();
       } else if(currentPose == myo::Pose::fist) {
-        printf("\nTap stop\n");
+        printf("\nFist stop\n");
 
         myo->unlock(myo::Myo::unlockHold);
         myo->notifyUserAction();
@@ -122,7 +124,6 @@ class DataCollector : public myo::DeviceListener {
       }
       else {
         myo->unlock(myo::Myo::unlockHold);
-        myo->notifyUserAction();
       }
       currentPose = pose;
 
@@ -290,6 +291,14 @@ int Display::handleEvents() {
         switch(event.key.keysym.sym) {
           case SDLK_q:
             return -1;
+          case SDLK_x:
+            if(xInvert) xInvert = false;
+            else xInvert = true;
+            break;
+          case SDLK_y:
+            if(yInvert) yInvert = false;
+            else yInvert = true;
+            break;
         }
         break;
       /*
@@ -394,8 +403,14 @@ int main(int argc, char * argv[]) {
   int i = 255;
   int j = 0;
   int k = 0;
+
+  int lastX, lastY;
+
   mouseRect = {0, 0, 10, 10};
   unsigned int begin = SDL_GetTicks();
+
+  bool firstFist;
+
 
   //main loop
   while(!quit) {
@@ -414,8 +429,17 @@ int main(int argc, char * argv[]) {
     hub.run(1);
 
     //calculate myo position
-    int x = (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0;
-    int y = (900 - collector.getPitch()) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
+    int x;
+    if(xInvert)
+      x = (collector.getYaw() - 900) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0;
+    else
+      x = (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0;
+    int y;
+
+    if(yInvert)
+      y = (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
+    else
+      y = (900 - collector.getPitch()) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
     
     //cout << x << " " << y << endl;
     //collector.print();
@@ -428,8 +452,22 @@ int main(int argc, char * argv[]) {
 
     switch(pose) {
       case POSE_FIST:
+
+        if(firstFist) {
+          lastX = x;
+          lastY = y;
+          firstFist = false;
+        }
         //draw to screen
-        SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, i, j, k));
+        while(rect2.x != lastX || rect2.y != lastY) {
+          SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, i, j, k));
+          if(rect2.x < lastX) rect2.x += 1;
+          else if(rect2.x > lastX) rect2.x -= 1;
+
+          if(rect2.y < lastY) rect2.y += 1;
+          else if(rect2.y > lastY) rect2.y -= 1;
+        }
+
 
         if(i == 255 && j < 255 && k == 0) {
           j++;
@@ -450,10 +488,20 @@ int main(int argc, char * argv[]) {
           k--;
         }
 
+        lastX = x;
+        lastY = y;
+
         break;
       case POSE_SPREAD:
         //clear drawings
         SDL_FillRect(drawSurface, NULL, SDL_MapRGB(drawSurface->format, 0, 0, 0));
+        break;
+      case POSE_TAP:
+        lastX = x;
+        lastY = y;
+        break;
+      case POSE_OTHER:
+        firstFist = true;
         break;
     }
 
