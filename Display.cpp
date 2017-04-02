@@ -107,23 +107,16 @@ class DataCollector : public myo::DeviceListener {
       if(pose == myo::Pose::fist) {
         printf("\nFist pose\n");
 
-        myo->unlock(myo::Myo::unlockHold);
-        myo->notifyUserAction();
       } else if(currentPose == myo::Pose::fist) {
         printf("\nFist stop\n");
 
-        myo->unlock(myo::Myo::unlockHold);
-        myo->notifyUserAction();
       }
       else if(pose == myo::Pose::doubleTap) {
         zPitch = pitch_w - 900;
         zYaw = yaw_w - 900;
 
-        myo->unlock(myo::Myo::unlockHold);
-        myo->notifyUserAction();
       }
       else {
-        myo->unlock(myo::Myo::unlockHold);
       }
       currentPose = pose;
 
@@ -428,6 +421,8 @@ int main(int argc, char * argv[]) {
     //handle myo events
     hub.run(1);
 
+    collector.print();
+
     //calculate myo position
     int x;
     if(xInvert)
@@ -447,7 +442,7 @@ int main(int argc, char * argv[]) {
     //get myo pose
     int pose = collector.getPose();
 
-    SDL_Rect rect2 = {x, y, 3, 3};
+    SDL_Rect rect2 = {x, y, (collector.getRoll() - 300) / 200, (collector.getRoll() - 300) / 200};
     //SDL_Rect rect3 = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 
     switch(pose) {
