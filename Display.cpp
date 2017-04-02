@@ -91,7 +91,7 @@ class DataCollector : public myo::DeviceListener {
                          1.0f - 2.0f * (quat.x() * quat.x() + quat.y() * quat.y()));
       float pitch = asin(max(-1.0f, min(1.0f, 2.0f * (quat.w() * quat.y() - quat.z() * quat.x()))));
       float yaw = atan2(2.0f * (quat.w() * quat.z() + quat.x() * quat.y()),
-                        1.0f - 2.0f * (quat.y() * quat.y() + quat.z() * quat.z()));
+                      1.0f - 2.0f * (quat.y() * quat.y() + quat.z() * quat.z()));
       // Convert the floating point angles in radians to a scale from 0 to 1800.
       roll_w = static_cast<int>((roll + (float)M_PI)/(M_PI * 2.0f) * 1800);
       pitch_w = static_cast<int>((pitch + (float)M_PI/2.0f)/M_PI * 1800);
@@ -209,7 +209,7 @@ int Display::init() {
   }
  
   //attempt to create window  
-  window = SDL_CreateWindow("Cubeception 3 Status Monitor", 
+  window = SDL_CreateWindow("MyoDraw", 
       SDL_WINDOWPOS_UNDEFINED, 
       SDL_WINDOWPOS_UNDEFINED, 
       SCREEN_WIDTH, 
@@ -391,7 +391,7 @@ int main(int argc, char * argv[]) {
   int quit = 0;
   int frames = 0;
 
-  int i = 255;
+  int i = 127;
   int j = 0;
   int k = 255;
   mouseRect = {0, 0, 10, 10};
@@ -415,10 +415,10 @@ int main(int argc, char * argv[]) {
 
     //calculate myo position
     int x = (900 - collector.getYaw()) * X_SENS * SCREEN_WIDTH / 1800.0 + 900 * SCREEN_WIDTH / 1800.0;
-    int y = (collector.getPitch() - 900) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
+    int y = (900 - collector.getPitch()) * Y_SENS * SCREEN_HEIGHT / 1800.0 + 900 * SCREEN_HEIGHT / 1800.0;
     
     //cout << x << " " << y << endl;
-    collector.print();
+    //collector.print();
 
     //get myo pose
     int pose = collector.getPose();
@@ -430,16 +430,16 @@ int main(int argc, char * argv[]) {
       case POSE_FIST:
         //draw to screen
         SDL_FillRect(drawSurface, &rect2, SDL_MapRGB(drawSurface->format, i, j, k));
-        i--;
-        j++;
-        k--;
+        i += 1;
+        j += 2;
+        k += 3;
 
-        if(i < 0)
-          i = 255;
+        if(i > 255)
+          i = 0;
         if(j > 255)
           j = 0;
-        if(k < 0)
-          k = 255;
+        if(k > 255)
+          k = 0;
         break;
       case POSE_SPREAD:
         //clear drawings
