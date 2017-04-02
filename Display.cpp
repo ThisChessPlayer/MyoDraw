@@ -52,11 +52,16 @@ SDL_Rect tile;
 SDL_Rect downRect;
 SDL_Rect upRect;
 SDL_Rect pointerRect;
+
+int lastX, lastY;
+
 bool mouseDown = false;
 bool calibrate = false;
 
 bool xInvert = false;
 bool yInvert = false;
+
+bool firstFist = false;
 
 // Classes that inherit from myo::DeviceListener can be used to receive events from Myo devices. DeviceListener
 // provides several virtual functions for handling different kinds of events. If you do not override an event, the
@@ -294,21 +299,20 @@ int Display::handleEvents() {
             break;
         }
         break;
-      /*
+      
       case SDL_MOUSEBUTTONDOWN:
         mouseDown = true;
         SDL_GetMouseState(&x, &y);
-        downRect = {x - (x % 50), y - (y % 50), 50, 50};
-        if(x / 50 == 0 && y / 50 == 0) {
-          calibrate = true;
-        }
+        lastX = x;
+        lastY = y;
+        firstFist = false;
         break;
       case SDL_MOUSEBUTTONUP:
         mouseDown = false;
         SDL_GetMouseState(&x, &y);
-        upRect = {x - (x % 50), y - (y % 50), 50, 50};
+        firstFist = true;
         break;
-      */
+      
       case SDL_MOUSEMOTION:
 
         //get mouse position, draw rect
@@ -397,13 +401,8 @@ int main(int argc, char * argv[]) {
   int j = 0;
   int k = 0;
 
-  int lastX, lastY;
-
   mouseRect = {0, 0, 10, 10};
   unsigned int begin = SDL_GetTicks();
-
-  bool firstFist;
-
 
   //main loop
   while(!quit) {
