@@ -2,7 +2,7 @@
 
                                                          Author: Jason Ma
                                                          Date:   Apr 01 2017
-                                      MyoSign
+                                      MyoDraw
 
  File Name:     Display.cpp
  Description:   SDL interface, handles events and displays everything
@@ -449,18 +449,7 @@ int main(int argc, char * argv[]) {
         else {
           k--;
         }
-        /*
-        i += 1;
-        j += 2;
-        k += 3;
 
-        if(i > 255)
-          i = 0;
-        if(j > 255)
-          j = 0;
-        if(k > 255)
-          k = 0;
-          */
         break;
       case POSE_SPREAD:
         //clear drawings

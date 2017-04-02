@@ -2,7 +2,7 @@
 
                                                          Author: Jason Ma
                                                          Date:   Apr 01 2017
-                                      SDLGame
+                                      MyoDraw
 
  File Name:     Display.h
  Description:   SDL interface, handles events and displays everything
