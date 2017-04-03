@@ -420,7 +420,7 @@ int main(int argc, char * argv[]) {
     //handle myo events
     hub.run(1);
 
-    collector.print();
+    //collector.print();
 
     //calculate myo position
     int x;
@@ -441,7 +441,7 @@ int main(int argc, char * argv[]) {
     //get myo pose
     int pose = collector.getPose();
 
-    SDL_Rect rect2 = {x, y, (collector.getRoll() - 300) / 200, (collector.getRoll() - 300) / 200};
+    SDL_Rect rect2 = {x, y, (collector.getRoll()) / 200, (collector.getRoll()) / 200};
     //SDL_Rect rect3 = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 
     switch(pose) {
