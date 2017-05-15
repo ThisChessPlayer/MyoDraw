@@ -1,0 +1,40 @@
+--------------------------------------------------------------------------------
+                   _   _ _   _ _____ _____ _____ _____ _ _ _                    
+                  | \_/ | | | |  _  |  _  \  _  \  _  | | | |                   
+                  | \_/ | |_| | | | | | | | |_| / |_| | | | |                   
+                  | | | |_   _| | | | | | |  _  \  _  | | | |                   
+                  | | | | | | | |_| | |_| | | | | | | | | | |                   
+                  |_| |_| |_| |_____|_____/_| |_|_| |_|_____|                   
+--------------------------------------------------------------------------------
+Uses the Myo armband's IMU and EKG sensor to detect arm orientation and hand
+gestures, which are used to draw onto a screen using SDL2. The colors change
+automatically.
+
+Available gestures:
+- Fist -> draw
+- Spread fingers -> erase drawing
+- Double tap middle finger with thumb -> center cursor
+- Rotate wrist -> change thickness of drawing
+--------------------------------------------------------------------------------
+Dependencies:
+  - Myo Armband / Myo Connect
+  
+--------------------------------------------------------------------------------
+Building program:
+  Run make in the directory containing Makefile
+
+  Building requires that the Myo SDK is in path
+  (Tested on Windows, possibly has Linux support)
+--------------------------------------------------------------------------------
+Running program:
+
+  Run Myo Connect
+
+  Linux: ./myoDraw
+  Windows: myoDraw.exe
+
+  Sync armband with program - wave right if right handed or left if left handed
+  
+  Double tap to center cursor on screen.
+  Make a fist to begin drawing!
+--------------------------------------------------------------------------------
